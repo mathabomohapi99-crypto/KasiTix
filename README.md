@@ -9,10 +9,10 @@
 | R5 | Service (`OrderService.PlaceAsync`, step 2) | It depends on the event's current status and the current time, which are loaded state and not part of the request. ] |
 | R6 | Validator (`PlaceOrderRequestValidator`), Entity (`Order.AddLine`, `OrderLine` constructor), DB (CHECK `Quantity BETWEEN 1 AND 10`, unique `(OrderId, TicketTypeId)`) | The validator returns a 400 for the whole request up front.  |
 | R7 | Entity (`TicketType.Reserve`), concurrency token (xmin `Version`), DB CHECK (`Sold >= 0 AND Sold <= Capacity`) | `Reserve` gives a clean 409 in the normal case, but it only sees its own in-memory copy. |
-| R8 | Controller (header present), Service (lookup by key first), DB unique index on `IdempotencyKey` | The controller returns 400 for a missing header. The lookup returns the original order on a replay. The unique index handles two simultaneous requests with the same new key: the second insert fails with 23505 and returns 409. |
+| R8 | Controller (header present), Service (lookup by key first), DB unique index on `IdempotencyKey` | The controller returns 400 for a missing header. T|
 | R9 | Service (`BuyerHasConfirmedOrderAsync`, a database query), DB partial unique index on `(EventId, BuyerEmail) WHERE Status = 'Confirmed'` | The query gives a clear 409 without trying to insert. It is check-then-insert, so only the partial unique index stops two concurrent orders from the same buyer. The index is partial so a Cancelled order doesn't block a new one. |
 | R10 | Entity (`Order.AddLine` copies `ticketType.Price`), schema (`OrderLine.UnitPrice` column) | The price is captured at purchase time and stored on the line. `Total` is computed from line prices, never from the current ticket type price, so later price changes can't affect old orders. |
-| R11 | Service (`EventService.CancelAsync` inside an explicit transaction), Entities (`Event.Cancel`, `Order.Cancel`, `TicketType.Release`) | `Event` can't see orders (they are a separate aggregate), so a service coordinates the work. The transaction makes it all-or-nothing, and xmin still guards the `Sold` changes. |
+| R11 | Service (`EventService.CancelAsync` inside an explicit transaction), Entities (`Event.Cancel`, `Order.Cancel`, `TicketType.Release`) | `Event` can't see orders (they are a separate aggregate), so a service coordinates the work. |
 
 
 ## Written answers
